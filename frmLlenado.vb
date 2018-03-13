@@ -195,6 +195,13 @@ Public Class frmLlenado
 
                 nSaldoFinal = Round(nSaldoFinal + nFEGA + nGarantia, 2)
 
+                'cambio solicitado por Valentin++++++++++++++++++++++
+                If CTOD(cFechaInicial) < CTOD(diaAnterior.ToString("yyyyMM01")) And cDocumento <> "EFECTIVO" Then
+                    cFechaInicial = diaAnterior.ToString("yyyyMM01")
+                    cFechaFinal = diaAnterior.ToString("yyyyMM01")
+                End If
+                'cambio solicitado por Valentin++++++++++++++++++++++
+
                 strInsert = "INSERT INTO DetalleFINAGIL (Anexo, Ciclo, Cliente, Consecutivo, FechaInicial, FechaFinal, Dias, TasaBP, SaldoInicial, SaldoFinal, Concepto, Importe, FEGA, Garantia, Intereses,trdt,provinte) "
                 strInsert = strInsert & "VALUES ('"
                 strInsert = strInsert & cAnexo & "', '"
