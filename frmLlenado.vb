@@ -62,28 +62,36 @@ Public Class frmLlenado
         Dim nSaldoInicial As Decimal = 0
         Dim nTasa As Decimal = 0
         Dim nTasaBP As Decimal = 0
-        Dim diaAnterior As Date = Now.AddDays(-1)
+        Dim diaAnterior As Date = Now.AddDays(-90)
+        Dim FechaAplicacion As Date
         Dim cMinistracion As Integer
         Dim CFechaAutorizacion As String = ""
         Dim nPorcFega As Decimal = 0
-        'diaAnterior = "01/02/2017"
+        'diaAnterior = "12/02/2018"
 
         'llena fechas para detalle finagil
         cm4 = New SqlCommand("update mFINAGIL Set fechapago = fechaalta, fechadocumento = fechaalta where " _
-            & "fechapago = '' and documento NOT IN ('EFECTIVO','REEMBOLSO') and fechaalta = '" & diaAnterior.ToString("yyyyMMdd") & "'  ", cnAgil)
+            & "fechapago = '' and documento NOT IN ('EFECTIVO','REEMBOLSO') and fechaalta >= '" & diaAnterior.ToString("yyyyMMdd") & "'  ", cnAgil)
         cnAgil.Open()
         cm4.ExecuteScalar()
         cnAgil.Close()
+
+        cm4 = New SqlCommand("SELECT Fecha FROM CONT_FechasAplicacion WHERE (Estatus = N'Vigente')", cnAgil)
+        cnAgil.Open()
+        FechaAplicacion = cm4.ExecuteScalar()
+        cnAgil.Close()
+
+
 
         ' El siguiente Command trae todas las ministraciones que haya hecho FINAGIL en el mes de proceso
         ' "WHERE Avios.Ciclo IN ('05','06','07','08') AND FechaPago >= '20121208' AND FechaPago <= '20121212' AND Importe > 0 " & _
         With cm1
             .CommandType = CommandType.Text
-            .CommandText = "SELECT mFINAGIL.*, Cliente, Tipta, Tasas, DiferencialFINAGIL, Avios.fondeo, FechaAutorizacion, PorcFega FROM mFINAGIL " & _
-                           "INNER JOIN Avios ON mFINAGIL.Anexo = Avios.Anexo AND mFINAGIL.Ciclo = Avios.Ciclo " & _
-                           "WHERE ((Avios.Ciclo >= '05' and Avios.tipar <> 'C') or (Avios.tipar = 'C')) AND " & _
-                           "FechaAlta >= '" & diaAnterior.ToString("yyyyMMdd") & "' AND FechaAlta <= '" & diaAnterior.ToString("yyyyMMdd") & "' " & _
-                            "AND FechaPago <> '' And Importe > 0 AND (mFINAGIL.procesado is null or mFINAGIL.procesado <> 1) " & _
+            .CommandText = "SELECT mFINAGIL.*, Cliente, Tipta, Tasas, DiferencialFINAGIL, Avios.fondeo, FechaAutorizacion, PorcFega, AplicaFega FROM mFINAGIL " &
+                           "INNER JOIN Avios ON mFINAGIL.Anexo = Avios.Anexo AND mFINAGIL.Ciclo = Avios.Ciclo " &
+                           "WHERE ((Avios.Ciclo >= '05' and Avios.tipar <> 'C') or (Avios.tipar = 'C')) AND " &
+                           "FechaAlta >= '" & diaAnterior.ToString("yyyyMMdd") & "' AND (mFINAGIL.Notas = 'PAGADO')" &
+                            "AND FechaPago <> '' And Importe > 0 AND (mFINAGIL.procesado is null or mFINAGIL.procesado <> 1) " &
                            "ORDER BY mFINAGIL.Ciclo, mFINAGIL.Anexo, FechaAlta, Ministracion"
             .Connection = cnAgil
         End With
@@ -109,6 +117,9 @@ Public Class frmLlenado
 
                 nDiferencial = drMinistracion("DiferencialFINAGIL")
                 cFechaPago = drMinistracion("FechaPago")
+                If cFechaPago < FechaAplicacion.ToString("yyyyMM01") Then
+                    cFechaPago = FechaAplicacion.ToString("yyyyMM01")
+                End If
                 nImporte = drMinistracion("Importe")
                 nGarantia = drMinistracion("Garantia")
                 cDocumento = drMinistracion("Documento")
@@ -116,8 +127,8 @@ Public Class frmLlenado
 
                 With cm2
                     .CommandType = CommandType.Text
-                    .CommandText = "SELECT * FROM DetalleFINAGIL " & _
-                                   "WHERE Anexo = '" & cAnexo & "' AND Ciclo = '" & cCiclo & "' " & _
+                    .CommandText = "SELECT * FROM DetalleFINAGIL " &
+                                   "WHERE Anexo = '" & cAnexo & "' AND Ciclo = '" & cCiclo & "' " &
                                    "ORDER BY Consecutivo"
                     .Connection = cnAgil
                 End With
@@ -188,19 +199,15 @@ Public Class frmLlenado
                     Else
                         nFEGA = Round(nImporte * 0.0116, 2)
                     End If
+                    If drMinistracion("AplicaFega") = False Then
+                        nFEGA = 0
+                    End If
                 Else
                     nFEGA = 0
                     nGarantia = 0
                 End If
 
                 nSaldoFinal = Round(nSaldoFinal + nFEGA + nGarantia, 2)
-
-                'cambio solicitado por Valentin++++++++++++++++++++++
-                If CTOD(cFechaInicial) < CTOD(diaAnterior.ToString("yyyyMM01")) And cDocumento <> "EFECTIVO" Then
-                    cFechaInicial = diaAnterior.ToString("yyyyMM01")
-                    cFechaFinal = diaAnterior.ToString("yyyyMM01")
-                End If
-                'cambio solicitado por Valentin++++++++++++++++++++++
 
                 strInsert = "INSERT INTO DetalleFINAGIL (Anexo, Ciclo, Cliente, Consecutivo, FechaInicial, FechaFinal, Dias, TasaBP, SaldoInicial, SaldoFinal, Concepto, Importe, FEGA, Garantia, Intereses,trdt,provinte) "
                 strInsert = strInsert & "VALUES ('"
@@ -264,9 +271,9 @@ Public Class frmLlenado
 
             With cm1
                 .CommandType = CommandType.Text
-                .CommandText = "SELECT SUBSTRING(Vigencia,1,6) AS Mes, ROUND(AVG(Valor),4) AS Promedio FROM Hista " & _
-                               "WHERE Tasa = '4' " & _
-                               "GROUP BY SUBSTRING(Vigencia,1,6) " & _
+                .CommandText = "SELECT SUBSTRING(Vigencia,1,6) AS Mes, ROUND(AVG(Valor),4) AS Promedio FROM Hista " &
+                               "WHERE Tasa = '4' " &
+                               "GROUP BY SUBSTRING(Vigencia,1,6) " &
                                "ORDER BY SUBSTRING(Vigencia,1,6)"
                 .Connection = cnAgil
             End With
@@ -299,8 +306,8 @@ Public Class frmLlenado
 
             With cm1
                 .CommandType = CommandType.Text
-                .CommandText = "SELECT * FROM Hista " & _
-                               "WHERE Tasa = '4' " & _
+                .CommandText = "SELECT * FROM Hista " &
+                               "WHERE Tasa = '4' " &
                                "ORDER BY Vigencia"
                 .Connection = cnAgil
             End With
@@ -392,12 +399,12 @@ Public Class frmLlenado
 
         With cm1
             .CommandType = CommandType.Text
-            .CommandText = "SELECT DetalleFINAGIL.Anexo, DetalleFINAGIL.Ciclo FROM DetalleFINAGIL " & _
-                           "INNER JOIN Avios ON DetalleFINAGIL.Anexo = Avios.Anexo AND DetalleFINAGIL.Ciclo = Avios.Ciclo " & _
-                           "INNER JOIN Clientes ON Avios.Cliente = Clientes.Cliente " & _
-                           "WHERE Avios.Ciclo >= '05' " & _
-                           "GROUP BY DetalleFINAGIL.Anexo, DetalleFINAGIL.Ciclo " & _
-                           "HAVING SUM(Importe+FEGA+Garantia) > 0 " & _
+            .CommandText = "SELECT DetalleFINAGIL.Anexo, DetalleFINAGIL.Ciclo FROM DetalleFINAGIL " &
+                           "INNER JOIN Avios ON DetalleFINAGIL.Anexo = Avios.Anexo AND DetalleFINAGIL.Ciclo = Avios.Ciclo " &
+                           "INNER JOIN Clientes ON Avios.Cliente = Clientes.Cliente " &
+                           "WHERE Avios.Ciclo >= '05' " &
+                           "GROUP BY DetalleFINAGIL.Anexo, DetalleFINAGIL.Ciclo " &
+                           "HAVING SUM(Importe+FEGA+Garantia) > 0 " &
                            "ORDER BY DetalleFINAGIL.Anexo, DetalleFINAGIL.Ciclo"
             .Connection = cnAgil
         End With
@@ -419,9 +426,9 @@ Public Class frmLlenado
 
             With cm2
                 .CommandType = CommandType.Text
-                .CommandText = "SELECT DetalleFINAGIL.*, Tipta, Tasas, DiferencialFINAGIL, UltimoCorte FROM DetalleFINAGIL " & _
-                               "INNER JOIN Avios ON DetalleFINAGIL.Anexo = Avios.Anexo AND DetalleFINAGIL.Ciclo = Avios.Ciclo " & _
-                               "WHERE DetalleFINAGIL.Anexo = '" & cAnexo & "' AND DetalleFINAGIL.Ciclo = '" & cCiclo & "' " & _
+                .CommandText = "SELECT DetalleFINAGIL.*, Tipta, Tasas, DiferencialFINAGIL, UltimoCorte FROM DetalleFINAGIL " &
+                               "INNER JOIN Avios ON DetalleFINAGIL.Anexo = Avios.Anexo AND DetalleFINAGIL.Ciclo = Avios.Ciclo " &
+                               "WHERE DetalleFINAGIL.Anexo = '" & cAnexo & "' AND DetalleFINAGIL.Ciclo = '" & cCiclo & "' " &
                                "ORDER BY DetalleFINAGIL.Anexo, Consecutivo"
                 .Connection = cnAgil
             End With
@@ -608,12 +615,12 @@ Public Class frmLlenado
 
         With cm1
             .CommandType = CommandType.Text
-            .CommandText = "SELECT DetalleFINAGIL.Anexo, DetalleFINAGIL.Ciclo, fechaterminacion FROM DetalleFINAGIL " & _
-                            "INNER JOIN Avios ON DetalleFINAGIL.Anexo = Avios.Anexo AND DetalleFINAGIL.Ciclo = Avios.Ciclo " & _
-                            "INNER JOIN Clientes ON Avios.Cliente = Clientes.Cliente " & _
-                            "WHERE (Avios.Ciclo >= '05' and Avios.tipar = 'H') or (Avios.tipar = 'C') " & _
-                            "GROUP BY DetalleFINAGIL.Anexo, DetalleFINAGIL.Ciclo, fechaterminacion " & _
-                            "HAVING SUM(Importe+FEGA+Garantia) > 0 and fechaterminacion = '" & cFecha & "' " & _
+            .CommandText = "SELECT DetalleFINAGIL.Anexo, DetalleFINAGIL.Ciclo, fechaterminacion FROM DetalleFINAGIL " &
+                            "INNER JOIN Avios ON DetalleFINAGIL.Anexo = Avios.Anexo AND DetalleFINAGIL.Ciclo = Avios.Ciclo " &
+                            "INNER JOIN Clientes ON Avios.Cliente = Clientes.Cliente " &
+                            "WHERE (Avios.Ciclo >= '05' and Avios.tipar = 'H') or (Avios.tipar = 'C') " &
+                            "GROUP BY DetalleFINAGIL.Anexo, DetalleFINAGIL.Ciclo, fechaterminacion " &
+                            "HAVING SUM(Importe+FEGA+Garantia) > 0 and fechaterminacion = '" & cFecha & "' " &
                             "ORDER BY DetalleFINAGIL.Anexo, DetalleFINAGIL.Ciclo "
             .Connection = cnAgil
         End With
@@ -635,9 +642,9 @@ Public Class frmLlenado
 
             With cm2
                 .CommandType = CommandType.Text
-                .CommandText = "SELECT DetalleFINAGIL.*, Tipta, Tasas, DiferencialFINAGIL, UltimoCorte FROM DetalleFINAGIL " & _
-                               "INNER JOIN Avios ON DetalleFINAGIL.Anexo = Avios.Anexo AND DetalleFINAGIL.Ciclo = Avios.Ciclo " & _
-                               "WHERE DetalleFINAGIL.Anexo = '" & cAnexo & "' AND DetalleFINAGIL.Ciclo = '" & cCiclo & "' " & _
+                .CommandText = "SELECT DetalleFINAGIL.*, Tipta, Tasas, DiferencialFINAGIL, UltimoCorte FROM DetalleFINAGIL " &
+                               "INNER JOIN Avios ON DetalleFINAGIL.Anexo = Avios.Anexo AND DetalleFINAGIL.Ciclo = Avios.Ciclo " &
+                               "WHERE DetalleFINAGIL.Anexo = '" & cAnexo & "' AND DetalleFINAGIL.Ciclo = '" & cCiclo & "' " &
                                "ORDER BY DetalleFINAGIL.Anexo, Consecutivo"
                 .Connection = cnAgil
             End With
