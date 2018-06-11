@@ -67,7 +67,7 @@ Public Class frmLlenado
         Dim cMinistracion As Integer
         Dim CFechaAutorizacion As String = ""
         Dim nPorcFega As Decimal = 0
-        'diaAnterior = "12/02/2018"
+        'diaAnterior = "28/03/2018"
 
         'llena fechas para detalle finagil
         cm4 = New SqlCommand("update mFINAGIL Set fechapago = fechaalta, fechadocumento = fechaalta where " _
@@ -230,7 +230,7 @@ Public Class frmLlenado
                 cm1 = New SqlCommand(strInsert, cnAgil)
                 cm3 = New SqlCommand("update mFINAGIL Set Procesado = 1 where " _
                 & "Anexo = '" & cAnexo & "' And Ciclo = '" & cCiclo & "'  " _
-                & "and ministracion = " & cMinistracion & " and FechaPago = '" & cFechaPago & "';", cnAgil)
+                & "and ministracion = " & cMinistracion & " and Documento = '" & cDocumento.Trim & "';", cnAgil)
                 cnAgil.Open()
                 'MessageBox.Show(cm3.CommandText)
                 ERRR.WriteLine(cm3.CommandText & "|" & Now.ToString)
