@@ -66,6 +66,7 @@ Public Class frmLlenado
         Dim FechaAplicacion As Date
         Dim cMinistracion As Integer
         Dim CFechaAutorizacion As String = ""
+        Dim CFechaTerminacion As String = ""
         Dim nPorcFega As Decimal = 0
         'diaAnterior = "28/03/2018"
 
@@ -87,7 +88,7 @@ Public Class frmLlenado
         ' "WHERE Avios.Ciclo IN ('05','06','07','08') AND FechaPago >= '20121208' AND FechaPago <= '20121212' AND Importe > 0 " & _
         With cm1
             .CommandType = CommandType.Text
-            .CommandText = "SELECT mFINAGIL.*, Cliente, Tipta, Tasas, DiferencialFINAGIL, Avios.fondeo, FechaAutorizacion, PorcFega, AplicaFega FROM mFINAGIL " &
+            .CommandText = "SELECT mFINAGIL.*, Cliente, Tipta, Tasas, DiferencialFINAGIL, Avios.fondeo, FechaAutorizacion, PorcFega, AplicaFega, FechaTerminacion, FegaFlat FROM mFINAGIL " &
                            "INNER JOIN Avios ON mFINAGIL.Anexo = Avios.Anexo AND mFINAGIL.Ciclo = Avios.Ciclo " &
                            "WHERE ((Avios.Ciclo >= '05' and Avios.tipar <> 'C') or (Avios.tipar = 'C')) AND " &
                            "FechaAlta >= '" & diaAnterior.ToString("yyyyMMdd") & "' AND (mFINAGIL.Notas = 'PAGADO')" &
@@ -113,6 +114,7 @@ Public Class frmLlenado
                 nTasa = drMinistracion("Tasas")
                 cFondeo = drMinistracion("Fondeo")
                 CFechaAutorizacion = drMinistracion("FechaAutorizacion")
+                CFechaTerminacion = drMinistracion("FechaTerminacion")
                 nPorcFega = drMinistracion("PorcFega")
 
                 nDiferencial = drMinistracion("DiferencialFINAGIL")
@@ -190,17 +192,25 @@ Public Class frmLlenado
                 End If
                 If cFondeo = "03" Then
                     If CFechaAutorizacion >= "20160101" Then
+                        Dim TasaFega As Decimal = 0.174 ' fega con su iva
+
                         If nPorcFega > 0 Then
-                            nFEGA = Round(nImporte * nPorcFega, 2)
-                        Else
-                            nFEGA = Round(nImporte * 0.0174, 2)
+                            TasaFega = nPorcFega
                         End If
 
+                        If drMinistracion("AplicaFega") = False Then
+                            nFEGA = 0
+                        Else 'FegaFlat
+                            If drMinistracion("FegaFlat") = False Then
+                                Dim dias As Integer
+                                dias = DateDiff("d", Date.Now.Date, CTOD(CFechaTerminacion))
+                                nFEGA = Round(CDec(nImporte) * (TasaFega / 360) * dias, 2)
+                            Else
+                                nFEGA = Round(nImporte * TasaFega, 2)
+                            End If
+                        End If
                     Else
                         nFEGA = Round(nImporte * 0.0116, 2)
-                    End If
-                    If drMinistracion("AplicaFega") = False Then
-                        nFEGA = 0
                     End If
                 Else
                     nFEGA = 0
