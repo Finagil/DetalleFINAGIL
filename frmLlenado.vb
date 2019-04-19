@@ -26,7 +26,7 @@ Public Class frmLlenado
         Dim ERRR As New System.IO.StreamWriter("c:\Files\Errores.txt", System.IO.FileMode.Append, System.Text.Encoding.GetEncoding(1252))
 
         ' Declaración de variables de conexión ADO .NET
-        Dim cnAgil As New SqlConnection("Server=SERVER-RAID; DataBase=Production; User ID = 'User_PRO'; pwd = 'User_PRO2015'")
+        Dim cnAgil As New SqlConnection("Server=SERVER-RAID2; DataBase=Production; User ID = 'User_PRO'; pwd = 'User_PRO2015'")
         Dim cm1 As New SqlCommand()
         Dim cm2 As New SqlCommand()
         Dim cm3 As New SqlCommand()
@@ -55,7 +55,7 @@ Public Class frmLlenado
         Dim nDias As Integer = 0
         Dim nDiferencial As Decimal = 0
         Dim nFEGA As Decimal = 0
-        Dim nGarantia As Decimal = 0
+        Dim nGarantiaLiq As Decimal = 0
         Dim nImporte As Decimal = 0
         Dim nIntereses As Decimal = 0
         Dim nSaldoFinal As Decimal = 0
@@ -123,7 +123,8 @@ Public Class frmLlenado
                     cFechaPago = FechaAplicacion.ToString("yyyyMM01")
                 End If
                 nImporte = drMinistracion("Importe")
-                nGarantia = drMinistracion("Garantia")
+                nGarantiaLiq = drMinistracion("Garantia")
+                nFEGA = drMinistracion("Fega")
                 cDocumento = drMinistracion("Documento")
                 cMinistracion = drMinistracion("Ministracion")
 
@@ -191,33 +192,33 @@ Public Class frmLlenado
 
                 End If
                 If cFondeo = "03" Then
-                    If CFechaAutorizacion >= "20160101" Then
-                        Dim TasaFega As Decimal = 0.174 ' fega con su iva
+                    'If CFechaAutorizacion >= "20160101" Then
+                    '    Dim TasaFega As Decimal = 0.0232 ' fega con su iva
 
-                        If nPorcFega > 0 Then
-                            TasaFega = nPorcFega
-                        End If
+                    '    If nPorcFega > 0 Then
+                    '        TasaFega = nPorcFega
+                    '    End If
 
-                        If drMinistracion("AplicaFega") = False Then
-                            nFEGA = 0
-                        Else 'FegaFlat
-                            If drMinistracion("FegaFlat") = False Then
-                                Dim dias As Integer
-                                dias = DateDiff("d", Date.Now.Date, CTOD(CFechaTerminacion))
-                                nFEGA = Round(CDec(nImporte) * (TasaFega / 360) * dias, 2)
-                            Else
-                                nFEGA = Round(nImporte * TasaFega, 2)
-                            End If
-                        End If
-                    Else
-                        nFEGA = Round(nImporte * 0.0116, 2)
-                    End If
+                    '    If drMinistracion("AplicaFega") = False Then
+                    '        nFEGA = 0
+                    '    Else 'FegaFlat
+                    '        If drMinistracion("FegaFlat") = False Then
+                    '            Dim dias As Integer
+                    '            dias = DateDiff("d", Date.Now.Date, CTOD(CFechaTerminacion))
+                    '            nFEGA = Round(CDec(nImporte) * (TasaFega / 360) * dias, 2)
+                    '        Else
+                    '            nFEGA = Round(nImporte * TasaFega, 2)
+                    '        End If
+                    '    End If
+                    'Else
+                    '    nFEGA = Round(nImporte * 0.0116, 2)
+                    'End If
                 Else
                     nFEGA = 0
-                    nGarantia = 0
+                    nGarantiaLiq = 0
                 End If
 
-                nSaldoFinal = Round(nSaldoFinal + nFEGA + nGarantia, 2)
+                nSaldoFinal = Round(nSaldoFinal + nFEGA + nGarantiaLiq, 2)
 
                 strInsert = "INSERT INTO DetalleFINAGIL (Anexo, Ciclo, Cliente, Consecutivo, FechaInicial, FechaFinal, Dias, TasaBP, SaldoInicial, SaldoFinal, Concepto, Importe, FEGA, Garantia, Intereses,trdt,provinte) "
                 strInsert = strInsert & "VALUES ('"
@@ -234,7 +235,7 @@ Public Class frmLlenado
                 strInsert = strInsert & cDocumento & "', "
                 strInsert = strInsert & nImporte & ", "
                 strInsert = strInsert & nFEGA & ", "
-                strInsert = strInsert & nGarantia & ", "
+                strInsert = strInsert & nGarantiaLiq & ", "
                 strInsert = strInsert & nIntereses & ",'" & diaAnterior.ToString("MM/dd/yyyy") & "',1)"
 
                 cm1 = New SqlCommand(strInsert, cnAgil)
@@ -261,7 +262,7 @@ Public Class frmLlenado
 
         ' Declaración de variables de conexión ADO .NET
 
-        Dim cnAgil As New SqlConnection("Server=SERVER-RAID; DataBase=Production; User ID = 'User_PRO'; pwd = 'User_PRO2015'")
+        Dim cnAgil As New SqlConnection("Server=SERVER-RAID2; DataBase=Production; User ID = 'User_PRO'; pwd = 'User_PRO2015'")
         Dim cm1 As New SqlCommand()
         Dim daTIIE As New SqlDataAdapter(cm1)
 
@@ -366,7 +367,7 @@ Public Class frmLlenado
 
         ' Declaración de variables de conexión ADO .NET
 
-        Dim cnAgil As New SqlConnection("Server=SERVER-RAID; DataBase=Production; User ID = 'User_PRO'; pwd = 'User_PRO2015'")
+        Dim cnAgil As New SqlConnection("Server=SERVER-RAID2; DataBase=Production; User ID = 'User_PRO'; pwd = 'User_PRO2015'")
         Dim cm1 As New SqlCommand()
         Dim cm2 As New SqlCommand()
         Dim daCreditos As New SqlDataAdapter(cm1)
@@ -579,7 +580,7 @@ Public Class frmLlenado
 
         ' Declaración de variables de conexión ADO .NET
 
-        Dim cnAgil As New SqlConnection("Server=SERVER-RAID; DataBase=Production; User ID = 'User_PRO'; pwd = 'User_PRO2015'")
+        Dim cnAgil As New SqlConnection("Server=SERVER-RAID2; DataBase=Production; User ID = 'User_PRO'; pwd = 'User_PRO2015'")
         Dim cm1 As New SqlCommand()
         Dim cm2 As New SqlCommand()
         Dim daCreditos As New SqlDataAdapter(cm1)
