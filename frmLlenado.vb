@@ -31,6 +31,7 @@ Public Class frmLlenado
         Dim cm2 As New SqlCommand()
         Dim cm3 As New SqlCommand()
         Dim cm4 As New SqlCommand()
+        Dim cm5 As New SqlCommand()
         Dim daMinistracion As New SqlDataAdapter(cm1)
         Dim daDetalle As New SqlDataAdapter(cm2)
 
@@ -242,10 +243,12 @@ Public Class frmLlenado
                 cm3 = New SqlCommand("update mFINAGIL Set Procesado = 1 where " _
                 & "Anexo = '" & cAnexo & "' And Ciclo = '" & cCiclo & "'  " _
                 & "and ministracion = " & cMinistracion & " and Documento = '" & cDocumento.Trim & "';", cnAgil)
+                cm5 = New SqlCommand("update avios set flcan = 'A' where anexo = '" & cAnexo & "' and Ciclo = '" & cCiclo & "'", cnAgil)
                 cnAgil.Open()
                 'MessageBox.Show(cm3.CommandText)
                 ERRR.WriteLine(cm3.CommandText & "|" & Now.ToString)
                 cm1.ExecuteNonQuery()
+                cm5.ExecuteNonQuery()
                 cMinistracion = cm3.ExecuteScalar()
                 cnAgil.Close()
                 dsAgil.Tables.Remove("Detalle")
