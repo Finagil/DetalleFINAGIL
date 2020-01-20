@@ -243,7 +243,7 @@ Public Class frmLlenado
                 cm3 = New SqlCommand("update mFINAGIL Set Procesado = 1 where " _
                 & "Anexo = '" & cAnexo & "' And Ciclo = '" & cCiclo & "'  " _
                 & "and ministracion = " & cMinistracion & " and Documento = '" & cDocumento.Trim & "';", cnAgil)
-                cm5 = New SqlCommand("update avios set flcan = 'A' where anexo = '" & cAnexo & "' and Ciclo = '" & cCiclo & "'", cnAgil)
+                cm5 = New SqlCommand("update avios set flcan = 'A' where flcan = 'F' AND anexo = '" & cAnexo & "' and Ciclo = '" & cCiclo & "'", cnAgil)
                 cnAgil.Open()
                 'MessageBox.Show(cm3.CommandText)
                 ERRR.WriteLine(cm3.CommandText & "|" & Now.ToString)
